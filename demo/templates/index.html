@@ -1,0 +1,118 @@
+<!doctype html>
+
+<html>
+  <head>
+    {% from 'macros.html' import checkbox, slider, card_header, collapse_handler %} 
+    <meta charset="utf-8">
+
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico"> 
+    <link rel="stylesheet" href="/static/bootstrap.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script type='text/javascript' src='https://webrtc.github.io/adapter/adapter-latest.js'></script>
+    <script type='text/javascript' src='/static/webrtc.js'></script>
+    <script type='text/javascript' src='/static/rest.js'></script>
+    <script type='text/javascript' src='/static/debounce.js'></script>
+    <script type='text/javascript' src="/static/jquery-3.6.3.min.js"></script>
+    <script type='text/javascript' src='/static/bootstrap.bundle.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+
+    <script type='text/javascript'>
+      
+      play = function() {
+        var videoStreams = [
+          getWebsocketURL(name = 'output', port = 8554),
+          getWebsocketURL(name = 'output', port = 8555),
+          getWebsocketURL(name = 'output', port = 8556),
+          getWebsocketURL(name = 'output', port = 8557)
+        ];
+        var videoPlayers = [
+          document.getElementById('gum1'),
+          document.getElementById('gum2'),
+          document.getElementById('gum3'),
+          document.getElementById('gum4')
+        ];
+      
+        videoPlayers.forEach(function(videoPlayer, index) {
+          var videoStream = videoStreams[index];
+          setupVideoPlayer(videoPlayer, videoStream);
+        });
+      };
+      
+      window.onload = function() {
+        document.getElementById('startRecording').addEventListener('click', startRecording);
+        document.getElementById('stopRecording').addEventListener('click', stopRecording);
+        document.getElementById('download').addEventListener('click', download);   
+        play();
+      };
+    </script>
+    <style>
+      /* 비디오 컨테이너 스타일 */
+      .video-container {
+        display: flex;
+        <!-- justify-content: space-around;  -->
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      /* 비디오 플레이어 스타일 */
+      .video-player {
+        flex: 1; /* Flexbox 아이템으로서의 비율 */
+        width: 50%; /* 최대 너비 설정 */
+        max-height: auto; /* 비디오 비율에 맞게 높이 조정 */
+      }
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* 항상 2개의 열 */
+        width: auto;
+        max-height: 70vh; /* 최대 높이를 화면 높이의 100%로 설정 */
+      }
+    
+      .video-grid video {
+        width: 100%;
+        height: calc((70vh) / 2); /* 화면 높이에서 간격을 뺀 값을 2로 나누어 비디오 높이 설정 */
+        
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg bg-primary">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">{{ title }}</a>
+      </div>
+    </nav>
+    
+
+    <!-- Video Player Container -->
+    <div class="video-container">
+      <video id="gum1" class = video-player  playsinline autoplay muted></video>
+      <video id="gum2" class = video-player  playsinline autoplay muted></video>
+      <video id="gum3" class = video-player  playsinline autoplay muted></video>
+      <video id="gum4" class = video-player  playsinline autoplay muted></video>
+    </div>
+    <!-- 
+    <div class="video-grid">
+      <video id="gum1" playsinline autoplay muted></video>
+      <video id="gum2" playsinline autoplay muted></video>
+      <video id="gum3" playsinline autoplay muted></video>
+      <video id="gum4" playsinline autoplay muted></video>
+    </div>
+    -->
+    <!-- Recording Controls -->
+    <div class="card" style="width: 36rem;">
+      <div class="card-body">
+        {{ card_header('detection_controls', 'Recording', arrow='down') }}
+        <div class="collapse show" id="detection_controls">
+          {{ checkbox('recording_enabled', '/recording/enabled', 'Enable Raw Recording', onchange='toggleRecording(this)') }}
+          {{ slider('recording_raw_start_frame_cut', '/recording/raw_start_frame_cut', 'Raw Start Frame Cut') }}
+          <button id="startRecording">Start Recording</button>
+          <button id="stopRecording">Stop Recording</button>
+          <button id="download">Download</button>
+          
+        </div>
+        {{ collapse_handler('detection_controls') }}
+      </div>
+    </div>
+
+  </body>
+</html>

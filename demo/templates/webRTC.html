@@ -1,0 +1,320 @@
+<html>
+
+<head>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #333;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    #videos {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    video {
+      width: 45%;
+      background-color: #000;
+    }
+
+    .button-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      border: none;
+      color: #fff;
+      background-color: #007bff;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 5px;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:last-child {
+      margin-right: 0;
+    }
+
+    .button-bar button[disabled] {
+      background-color: #6c757d;
+      cursor: default;
+    }
+
+    .button-red {
+      background-color: #dc3545;
+    }
+  </style>
+  <script type='text/javascript' src='https://webrtc.github.io/adapter/adapter-latest.js'></script>
+  <script type='text/javascript'>
+    var connections = {};
+    var reportError;
+    var mediaRecorder;
+    var recordedBlobs;
+    var remoteStream;
+
+
+
+    function onIncomingSDP(url, sdp) {
+      console.log('Incoming SDP: (%%s)' + JSON.stringify(sdp), url);
+
+      function onLocalDescription(desc) {
+        console.log('Local description (%%s)\\n' + JSON.stringify(desc), url);
+        connections[url].webrtcPeer.setLocalDescription(desc).then(function () {
+          connections[url].websocket.send(JSON.stringify({ type: 'sdp', 'data': connections[url].webrtcPeer.localDescription }));
+        }).catch(reportError);
+      }
+
+      connections[url].webrtcPeer.setRemoteDescription(sdp).catch(reportError);
+
+      if (connections[url].type == 'inbound') {
+        connections[url].webrtcPeer.createAnswer().then(onLocalDescription).catch(reportError);
+      }
+      else if (connections[url].type == 'outbound') {
+        getLocalStream().then((stream) => {
+          console.log('Adding local stream');
+          connections[url].webrtcPeer.addStream(stream);
+          connections[url].webrtcPeer.createAnswer().then(sdp => {
+            // https://stackoverflow.com/a/57674478 
+            var arr = sdp.sdp.split('\\r\\n');
+            arr.forEach((str, i) => {
+              if (/^a=fmtp:\\d*/.test(str)) {
+                arr[i] = str + ';x-google-max-bitrate=10000;x-google-min-bitrate=0;x-google-start-bitrate=6000';
+              } else if (/^a=mid:(1|video)/.test(str)) {
+                arr[i] += '\\r\\nb=AS:10000';
+              }
+            });
+            sdp = new RTCSessionDescription({
+              type: 'answer',
+              sdp: arr.join('\\r\\n'),
+            });
+            onLocalDescription(sdp);
+          }).catch(reportError);
+        });
+      }
+
+    }
+
+    function onIncomingICE(url, ice) {
+      var candidate = new RTCIceCandidate(ice);
+      console.log('Incoming ICE (%%s)\\n' + JSON.stringify(ice), url);
+      connections[url].webrtcPeer.addIceCandidate(candidate).catch(reportError);
+    }
+
+    function getConnectionStats(url, reportType) {
+    }
+
+
+    function onAddRemoteStream(event) {
+      var url = event.srcElement.url;
+      console.log('Adding remote stream to HTML video player (%%s)', url);
+      connections[url].videoElement.srcObject = event.streams[0];
+      connections[url].videoElement.play();
+      const gumVideo = document.querySelector('video#gum');
+      gumVideo.srcObject = event.streams[0];
+      <!-- startRecording(event.streams[0]); -->
+      remoteStream = event.streams[0];
+    }
+
+
+    function onIceCandidate(event) {
+      var url = event.srcElement.url;
+
+      if (event.candidate == null)
+        return;
+
+      console.log('Sending ICE candidate out (%%s)\\n' + JSON.stringify(event.candidate), url);
+      connections[url].websocket.send(JSON.stringify({ 'type': 'ice', 'data': event.candidate }));
+    }
+
+
+    function onServerMessage(event) {
+      var msg;
+      var url = event.srcElement.url;
+
+      try {
+        msg = JSON.parse(event.data);
+      } catch (e) {
+        return;
+      }
+
+      if (!connections[url].webrtcPeer) {
+        connections[url].webrtcPeer = new RTCPeerConnection(connections[url].webrtcConfig);
+        connections[url].webrtcPeer.url = url;
+
+        connections[url].webrtcPeer.onconnectionstatechange = (ev) => {
+          console.log('WebRTC connection state (%%s) ' + connections[url].webrtcPeer.connectionState, url);
+          if (connections[url].webrtcPeer.connectionState == 'connected')
+            setInterval(getConnectionStats, 1000, url, connections[url].type == 'inbound' ? 'inbound-rtp' : 'outbound-rtp');
+        }
+
+        if (connections[url].type == 'inbound')
+          connections[url].webrtcPeer.ontrack = onAddRemoteStream;
+        connections[url].webrtcPeer.onicecandidate = onIceCandidate;
+      }
+
+      switch (msg.type) {
+        case 'sdp': onIncomingSDP(url, msg.data); break;
+        case 'ice': onIncomingICE(url, msg.data); break;
+        default: break;
+      }
+    }
+    function startRecording() {
+      if (!remoteStream) {
+        console.error('No remote stream available.');
+        return;
+      }
+
+      recordedBlobs = [];
+      let options = { mimeType: 'video/webm;codecs=vp9' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        console.error(`${options.mimeType} is not Supported`);
+        options = { mimeType: 'video/webm;codecs=vp8' };
+      }
+      try {
+        mediaRecorder = new MediaRecorder(remoteStream, options);
+        mediaRecorder.ondataavailable = handleDataAvailable;
+        mediaRecorder.start();
+      } catch (e) {
+        console.error('Exception while creating MediaRecorder:', e);
+      }
+    }
+
+
+    function handleDataAvailable(event) {
+      console.log('Data available: size =', event.data.size);
+      if (event.data && event.data.size > 0) {
+        recordedBlobs.push(event.data);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+      }
+    }
+
+    function play() {
+      const recordedVideo = document.getElementById('recordedVideo');
+      if (recordedBlobs.length) {
+        const blob = new Blob(recordedBlobs, { type: 'video/webm' });
+        recordedVideo.src = window.URL.createObjectURL(blob);
+        recordedVideo.controls = true;
+        recordedVideo.play();
+      }
+    }
+
+    function download() {
+      if (recordedBlobs.length) {
+        const blob = new Blob(recordedBlobs, { type: 'video/webm' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'recorded.webm';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      }
+    }
+
+
+    function playStream(videoPlayer, hostname, port, path, configuration, reportErrorCB) {
+      var l = window.location;
+      if (path == 'null')
+        return;
+      var wsProt = (l.protocol == 'https:') ? 'wss://' : 'ws://';
+      var wsHost = (hostname != undefined) ? hostname : l.hostname;
+      var wsPort = (port != undefined) ? port : l.port;
+      var wsPath = (path != undefined) ? path : '/ws';
+      if (wsPort)
+        wsPort = ':' + wsPort;
+      var wsUrl = wsProt + wsHost + wsPort + wsPath;
+      console.log('Video server URL: ' + wsUrl);
+      var url = wsUrl;
+
+      connections[url] = {};
+
+      connections[url].type = 'inbound';
+      connections[url].videoElement = document.getElementById(videoPlayer);
+      connections[url].webrtcConfig = configuration;
+      reportError = (reportErrorCB != undefined) ? reportErrorCB : function (text) { };
+
+      connections[url].websocket = new WebSocket(wsUrl);
+      connections[url].websocket.addEventListener('message', onServerMessage);
+    }
+
+    function sendStream(hostname, port, path, configuration, reportErrorCB) {
+      var l = window.location;
+      if (path == 'null')
+        return;
+      if (l.protocol != 'https:') {
+        alert('Please use HTTPS to enable the use of your browser webcam');
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('getUserMedia() not available (confirm HTTPS is being used)');
+        return;
+      }
+      var wsProt = (l.protocol == 'https:') ? 'wss://' : 'ws://';
+      var wsHost = (hostname != undefined) ? hostname : l.hostname;
+      var wsPort = (port != undefined) ? port : l.port;
+      var wsPath = (path != undefined) ? path : '/ws';
+      if (wsPort)
+        wsPort = ':' + wsPort;
+      var wsUrl = wsProt + wsHost + wsPort + wsPath;
+      console.log('Video server URL: ' + wsUrl);
+      var url = wsUrl;
+
+      connections[url] = {};
+
+      connections[url].type = 'outbound';
+      connections[url].webrtcConfig = configuration;
+      reportError = (reportErrorCB != undefined) ? reportErrorCB : function (text) { };
+
+      connections[url].websocket = new WebSocket(wsUrl);
+      connections[url].websocket.addEventListener('message', onServerMessage);
+    }
+
+
+    window.onload = function () {
+      var config = { 'iceServers': [{ 'urls': 'stun:%s' }] };
+      playStream('gum', null, null, '%s', config, function (errmsg) { console.error(errmsg); });
+      sendStream(null, null, '%s', config, function (errmsg) { console.error(errmsg); });
+      document.getElementById('startRecording').addEventListener('click', startRecording);
+      document.getElementById('stopRecording').addEventListener('click', stopRecording);
+      document.getElementById('play').addEventListener('click', play);
+      document.getElementById('download').addEventListener('click', download);
+    };
+
+  </script>
+</head>
+
+<body style='background-color:#333333; color:#FFFFFF;'>
+  <div id="videos">
+    <video id="gum" playsinline autoplay muted></video>
+    <video id="recordedVideo" playsinline controls></video>
+  </div>
+  <div class="button-bar">
+    <button id="startRecording">Start Recording</button>
+    <button id="stopRecording">Stop Recording</button>
+    <button id="play">Play</button>
+    <button id="download">Download</button>
+  </div>
+
+</body>
+
+</html>
