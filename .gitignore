@@ -1,0 +1,9 @@
+build/
+logs/
+.idea/
+__pycache__
+*.pyc
+*.tar.gz
+*.pem
+*.mp4
+*.avi
