@@ -141,10 +141,6 @@
           aspect-ratio: 16 / 9; /* 비디오 비율 유지 */
         }
       }
-        .custom-container {
-          display: inline-block;
-          background-color: #4CAF50;
-        }
         .video-controls {
           position: absolute;
           bottom: 10px;
@@ -164,32 +160,21 @@
 
   <body>
 
-    <nav class="navbar navbar-expand-lg bg-light">
+    <nav class="navbar navbar-expand-lg bg-dark text-white" style="padding: 0;">
       <div class="container-fluid">
-          <a class="navbar-brand" href="#">{{ title }}</a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-              <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarNav">
-              <ul class="navbar-nav">
-                  <li class="nav-item">
-                      <form class="d-flex">
-                          
-                      </form>
-                  </li>
-                  <li class="nav-item">
-                      
-                  </li>
-                  <li class="nav-item">
-                      
-                  </li>
-                  <li class="nav-item">
-                      
-                  </li>
-              </ul>
-          </div>
+        <a href="https://github.com/dgdgksj/NRU-110v-WebRTC-VideoStream" class="navbar-brand" style="font-size: 20px;">{{ title }}</a>
+        <div class="d-flex align-items-center ms-auto">
+          <span class="me-1" style="font-size: 14px;">powered by</span>
+          <a href="http://www.givet.re.kr/" class="me-1 navbar-brand" style="font-size: 20px;">GIVET</a>
+          <span class="me-1" style="font-size: 14px;">and</span>
+          <a href="https://github.com/dusty-nv/jetson-inference" class="me-1 navbar-brand" style="font-size: 20px;">NVIDIA(dusty-nv)</a>
+        </div>
       </div>
     </nav>
+    
+    
+    
+    
       
     <div class="video-container">
       <video id="gum1" class="video-player" playsinline autoplay muted></video>
