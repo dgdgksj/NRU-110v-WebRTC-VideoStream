@@ -1,4 +1,5 @@
-# 
+# NRU-110v-WebRTC-VideoStream
+
 ![image](https://github.com/dgdgksj/NRU-110v-WebRTC-VideoStream/assets/48535768/5c83ba4f-8427-4887-93f0-245e1c6eace4)
 
 
@@ -17,14 +18,7 @@ The system plays an essential role, especially in situations where direct human 
 
 ## Hardware
 
-- **[GMSL](https://nnz-ipc.ru/files/documentation/neousys/ac-ar0147_datasheet.pdf):** We have configured our system with four GMSL cameras.
-- **[Thermal](http://www.indusvision.com/project/icube-pf-100/):** We have configured our system with one Thermal camera.
-- **[jetson](https://www.neousys-tech.com/ko/product/product-lines/in-vehicle-computing/nru-110v-nvidia-jatson-embedded-platform-gmsl-camera):** Ubuntu 18.04.6 LTS, jetpack 4.6.1
-
-
-
-(Include information about the project's license here. If the project uses an open-source license, provide its name and a brief description.)
-
-## Contact
-
-(Provide contact information for the project maintainers or support channels.)
+**[GMSL](https://nnz-ipc.ru/files/documentation/neousys/ac-ar0147_datasheet.pdf)**, 
+**[Thermal](http://www.indusvision.com/project/icube-pf-100/)**, 
+**[Jetson](https://www.neousys-tech.com/ko/product/product-lines/in-vehicle-computing/nru-110v-nvidia-jatson-embedded-platform-gmsl-camera)**,
+**[LTE Modem](https://www.eleparts.co.kr/goods/view?no=7260311)** 
