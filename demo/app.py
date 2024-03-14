@@ -13,12 +13,12 @@ class AppConfig:
     port = 8050
     ssl_key = os.getenv("SSL_KEY")
     ssl_cert = os.getenv("SSL_CERT")
-    title = "demo"
+    title = "Excavator Camera Monitor System"
     inputs = "/dev/video4"
 
 class CameraConfig(AppConfig):
     # options={'codec': 'h264', 'bitrate': 40000000}
-    options={'codec': 'h264', 'bitrate': 40}
+    options={'codec': 'h264', 'bitrate': 4000000}
 
 def get_camera_devices():
 	command = "ls -l /dev/video* | awk '{print $NF}'"
@@ -44,7 +44,7 @@ app_config = AppConfig()
 
 camera_configs = [CameraConfig() for i in range(len(camera_devices))]
 camera_configs = [set_camera_config(camera_config=config,camera_device=camera_devices[i],port=8554+i) for i, config in enumerate(camera_configs)]
-
+app_config.num_of_camera = len(camera_devices)
 # config2 = CameraConfig()
 
 # for data in camera_configs:
