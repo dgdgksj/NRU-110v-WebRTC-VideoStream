@@ -20,6 +20,9 @@ class CameraConfig(AppConfig):
     # options={'codec': 'h264', 'bitrate': 40000000}
     options={'codec': 'h264', 'bitrate': 4000000}
 
+class RTSPConfig:
+     ip = "rtsp://192.168.20.71/mpeg4"
+
 def get_camera_devices():
 	command = "ls -l /dev/video* | awk '{print $NF}'"
 	process = subprocess.Popen(
@@ -40,6 +43,7 @@ def set_camera_config(camera_config,camera_device,port):
      return camera_config
 
 camera_devices = get_camera_devices()
+camera_devices.append("rtsp://192.168.20.71/mpeg4")
 app_config = AppConfig()
 
 camera_configs = [CameraConfig() for i in range(len(camera_devices))]
